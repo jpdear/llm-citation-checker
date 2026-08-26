@@ -1,0 +1,28 @@
+[project]
+name = "LLM_citation_checker"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "whoisdomain==2.20260806.3",
+    "httpx==0.28.1",
+    "trafilatura==1.5.0",
+    "peewee==4.4.0",
+    "click==8.5.0",
+    "rich==15.0.0",
+]
+
+[tool.ruff.lint]
+select = ["I", "F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["core"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+
+[dependency-groups]
+dev = [
+    "pre-commit==4.6.0",
+    "ruff",
+    "bandit",
+]
