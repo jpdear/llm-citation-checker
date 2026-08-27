@@ -11,6 +11,9 @@ dependencies = [
     "rich==15.0.0",
 ]
 
+[project.scripts]
+lct = "lct.cli:app"
+
 [tool.ruff.lint]
 select = ["I", "F401"]
 
