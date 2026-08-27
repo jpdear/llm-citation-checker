@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import click
 
 
@@ -18,10 +16,7 @@ def app():
     help="Check SOURCE against these URLs instead of any found in SOURCE.",
 )
 def check(ctx, source, urls):
-    file_path = Path(source)
-
-    if not file_path.is_file():
-        ctx.exit(1)
+    pass
 
 
 if __name__ == "__main__":
