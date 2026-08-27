@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-lct = "lct.cli:app"
+lcc = "lcc.cli:app"
 
 [tool.ruff.lint]
 select = ["I", "F401"]
