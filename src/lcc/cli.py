@@ -27,6 +27,18 @@ def check(source, urls, url_file):
     if urls and url_file:
         raise click.UsageError("--url and --url-file are mutually exclusive.")
 
+    # TODO: Have the system parse source for urls
+
+    url_list = []
+
+    if urls:
+        url_list = [url for url in urls]
+    elif url_file:
+        with open(url_file, "r") as file:
+            url_list = [line for line in file]
+
+    print(f"Found {len(url_list)} urls")
+
 
 if __name__ == "__main__":
     app()
