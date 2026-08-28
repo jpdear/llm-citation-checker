@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import click
 
 
@@ -7,7 +9,6 @@ def app():
 
 
 @app.command()
-@click.pass_context
 @click.argument("source", type=click.File("r"), default="-")
 @click.option(
     "--url",
@@ -15,8 +16,16 @@ def app():
     multiple=True,
     help="Check SOURCE against these URLs instead of any found in SOURCE.",
 )
-def check(ctx, source, urls):
-    pass
+@click.option(
+    "--url-file",
+    "url_file",
+    type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
+    default=None,
+    help="Check SOURCE against URLs in a separate file instead of any found in SOURCE.",
+)
+def check(source, urls, url_file):
+    if urls and url_file:
+        raise click.UsageError("--url and --url-file are mutually exclusive.")
 
 
 if __name__ == "__main__":
