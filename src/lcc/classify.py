@@ -1,4 +1,1 @@
-SUPPORTED_RELIABLE = "Trusted"
-SUPPORTED_UNRELIABLE = "Questionable"
-UNSUPPORTED_RELIABLE = "Unrelated"
-UNSUPPORTED_UNRELIABLE = "Untrusted"
+# This file will eventaully be for classifying citations
