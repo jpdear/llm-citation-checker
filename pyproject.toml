@@ -30,7 +30,7 @@ known-first-party = ["lcc"]
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "F403"]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pre-commit==4.6.0",
     "ruff",
