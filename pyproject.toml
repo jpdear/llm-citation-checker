@@ -35,4 +35,5 @@ dev = [
     "pre-commit==4.6.0",
     "ruff",
     "bandit",
+    "pytest>=8.0",
 ]
