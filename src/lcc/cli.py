@@ -69,7 +69,9 @@ def check(source, urls, url_file):
     for raw, reason in rejected:
         click.echo(f"Skipped {raw!r}: {reason}", err=True)
 
-    click.echo(f"Found {len(candidate_urls)} usable URLs")
+    count = len(candidate_urls)
+
+    click.echo(f"Found {count} usable URL{'' if count == 1 else 's'}")
 
 
 if __name__ == "__main__":
