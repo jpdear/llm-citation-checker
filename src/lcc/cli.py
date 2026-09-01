@@ -1,8 +1,23 @@
+from collections.abc import Iterable
 from pathlib import Path
 
 import click
 
-from lcc.models import init_db
+from lcc.models import ValidationError, init_db, normalize_url
+
+
+def _clean_urls(raw_urls: Iterable[str]) -> tuple[list[str], list[tuple[str, str]]]:
+    """Split candidates into normalized-and-deduped and rejected-with-reason."""
+    seen: dict[str, None] = {}
+    rejected: list[tuple[str, str]] = []
+
+    for raw in raw_urls:
+        try:
+            seen.setdefault(normalize_url(raw), None)
+        except ValidationError as exc:
+            rejected.append((raw, str(exc)))
+
+    return list(seen), rejected
 
 
 @click.group()
@@ -45,9 +60,12 @@ def check(source, urls, url_file):
     if url_file:
         candidate_urls = url_file.read_text(encoding="utf-8").split()
 
-    # TODO: Have the system parse source for urls
+    candidate_urls, rejected = _clean_urls(candidate_urls)
 
-    print(f"Found {len(candidate_urls)} urls")
+    for raw, reason in rejected:
+        click.echo(f"Skipped {raw!r}: {reason}", err=True)
+
+    click.echo(f"Found {len(candidate_urls)} usable URLs")
 
 
 if __name__ == "__main__":
