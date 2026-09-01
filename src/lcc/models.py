@@ -111,7 +111,7 @@ def normalize_url(raw: str) -> str:
     if ":" in host:
         host = f"[{host}]"
 
-    netloc = f"{host}:{parts.port}" if parts.port else host
+    netloc = f"{host}:{port}" if port else host
     query = urlencode(
         [
             (k, v)
