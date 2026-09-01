@@ -104,6 +104,9 @@ def normalize_url(raw: str) -> str:
     if scheme not in ("http", "https"):
         raise ValidationError(f"Unsupported scheme {scheme!r} in {raw!r}")
 
+    if ":" in host:
+        host = f"[{host}]"
+
     netloc = f"{host}:{parts.port}" if parts.port else host
     query = urlencode(
         [
