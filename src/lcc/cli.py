@@ -51,7 +51,7 @@ def app(ctx: click.Context, db_path: str) -> None:
 
 
 @app.command()
-@click.argument("source", type=click.File("r"), default="-")
+@click.argument("source", type=click.File("r", encoding="utf-8"), default="-")
 @click.option(
     "--url",
     "urls",
