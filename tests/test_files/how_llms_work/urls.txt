@@ -1,0 +1,5 @@
+https://www.ibm.com/think/topics/large-language-models
+https://www.reddit.com/r/DeepThoughts/comments/1tzkxe7/the_fact_that_people_dont_know_how_ai_llms_work/
+https://aws.amazon.com/what-is/large-language-model/
+https://www.reddit.com/r/developersIndia/comments/1p4nje0/llms_explained_from_scratch_a_slow_read_for_for/
+https://uit.stanford.edu/service/techtraining/ai-demystified/llm
