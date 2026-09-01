@@ -1,4 +1,5 @@
 import hashlib
+import ipaddress
 from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
@@ -42,6 +43,13 @@ TRACKING_PARAMS = frozenset(
         "mc_eid",
         "ref_src",
     }
+)
+BLOCKED_PORTS = frozenset({22, 23, 25, 445, 3306, 5432, 6379, 9200, 11211})
+# is_private covers RFC1918, loopback, link-local, reserved, and unspecified.
+# It does not cover these two.
+EXTRA_BLOCKED_NETWORKS = (
+    ipaddress.ip_network("100.64.0.0/10"),  # CGNAT
+    ipaddress.ip_network("64:ff9b::/96"),  # NAT64
 )
 
 db = DatabaseProxy()
@@ -93,8 +101,28 @@ def to_local(value: datetime | None) -> datetime | None:
     return value.astimezone()
 
 
+def is_blocked_address(
+    ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> bool:
+    """True if this address is one we must never reach."""
+    if mapped := getattr(ip, "ipv4_mapped", None):
+        ip = mapped
+
+    return (
+        ip.is_private
+        or ip.is_multicast
+        or any(ip in net for net in EXTRA_BLOCKED_NETWORKS if net.version == ip.version)
+    )
+
+
 def normalize_url(raw: str) -> str:
-    """Canonical form of a URL, for dedup and fetching. Lossy: drops the fragment."""
+    """
+    Canonical form of a URL, for dedup and fetching. Lossy: drops the fragment.
+
+    Enforces every guard that needs no network: scheme allowlist, port policy,
+    and literal internal addresses. Hostnames need DNS, so fetch.guard handles
+    those - keeping this pure and safe to call from clean() on every save.
+    """
     try:
         parts = urlsplit((raw or "").strip())
         scheme, host = parts.scheme.lower(), (parts.hostname or "").lower()
@@ -107,6 +135,21 @@ def normalize_url(raw: str) -> str:
 
     if scheme not in ("http", "https"):
         raise ValidationError(f"Unsupported scheme {scheme!r} in {raw!r}")
+
+    if port in BLOCKED_PORTS:
+        raise ValidationError(f"Refusing non-web port {port} in {raw!r}")
+
+    # Drop redundant default ports so they dedup against the bare host.
+    if (scheme, port) in (("http", 80), ("https", 443)):
+        port = None
+
+    try:
+        literal = ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    else:
+        if is_blocked_address(literal):
+            raise ValidationError(f"Refusing to fetch internal address: {host!r}")
 
     if ":" in host:
         host = f"[{host}]"
