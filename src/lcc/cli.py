@@ -2,9 +2,10 @@ from collections.abc import Iterable
 from pathlib import Path
 
 import click
+from peewee import SqliteDatabase
 
 from lcc.fetch import guard
-from lcc.models import ValidationError, init_db, normalize_url
+from lcc.models import Source, ValidationError, init_db, normalize_url
 
 
 def _clean_urls(raw_urls: Iterable[str]) -> tuple[list[str], list[tuple[str, str]]]:
@@ -24,6 +25,17 @@ def _clean_urls(raw_urls: Iterable[str]) -> tuple[list[str], list[tuple[str, str
     return list(seen), rejected
 
 
+def get_db(ctx: click.Context) -> SqliteDatabase:
+    """Open the database on first use and close it when the command exits."""
+    state = ctx.ensure_object(dict)
+
+    if "db" not in state:
+        state["db"] = init_db(state.get("db_path"))
+        ctx.call_on_close(state["db"].close)
+
+    return state["db"]
+
+
 @click.group()
 @click.option(
     "--db",
@@ -34,10 +46,8 @@ def _clean_urls(raw_urls: Iterable[str]) -> tuple[list[str], list[tuple[str, str
     help="Database file to use. Defaults to a per-user application data directory.",
 )
 @click.pass_context
-def app(ctx, db_path):
-    database = init_db(db_path)
-
-    ctx.call_on_close(database.close)
+def app(ctx: click.Context, db_path: str) -> None:
+    ctx.ensure_object(dict)["db_path"] = db_path
 
 
 @app.command()
@@ -55,7 +65,8 @@ def app(ctx, db_path):
     default=None,
     help="Check SOURCE against URLs in a separate file instead of any found in SOURCE.",
 )
-def check(source, urls, url_file):
+@click.pass_context
+def check(ctx: click.Context, source, urls, url_file):
     if urls and url_file:
         raise click.UsageError("--url and --url-file are mutually exclusive.")
 
@@ -69,7 +80,12 @@ def check(source, urls, url_file):
     for raw, reason in rejected:
         click.echo(f"Skipped {raw!r}: {reason}", err=True)
 
-    count = len(candidate_urls)
+    database = get_db(ctx)
+
+    with database.atomic():
+        sources = [Source.for_url(url) for url in candidate_urls]
+
+    count = len(sources)
 
     click.echo(f"Found {count} usable URL{'' if count == 1 else 's'}")
 
