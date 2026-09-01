@@ -1,5 +1,6 @@
 import hashlib
 import ipaddress
+import string
 from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
@@ -45,6 +46,8 @@ TRACKING_PARAMS = frozenset(
     }
 )
 ALLOWED_PORTS = frozenset({80, 443, 8080, 8443})
+UNRESERVED = frozenset(string.ascii_letters + string.digits + "-._~")
+
 # is_private covers RFC1918, loopback, link-local, reserved, and unspecified.
 # It does not cover these two.
 EXTRA_BLOCKED_NETWORKS = (
@@ -115,6 +118,31 @@ def is_blocked_address(
     )
 
 
+def _normalize_percent(text: str) -> str:
+    """Decode only what RFC 3986 guarantees is safe."""
+    out, i = [], 0
+
+    while i < len(text):
+        if text[i] == "%" and i + 3 <= len(text):
+            pair = text[i + 1 : i + 3]
+
+            try:
+                char = chr(int(pair, 16))
+            except ValueError:
+                out.append(text[i])
+                i += 1
+
+                continue
+
+            out.append(char if char in UNRESERVED else "%" + pair.upper())
+            i += 3
+        else:
+            out.append(text[i])
+            i += 1
+
+    return "".join(out)
+
+
 def normalize_url(raw: str) -> str:
     """
     Canonical form of a URL, for dedup and fetching. Lossy: drops the fragment.
@@ -162,8 +190,24 @@ def normalize_url(raw: str) -> str:
             if k.lower() not in TRACKING_PARAMS
         ]
     )
+    path = _normalize_percent(parts.path or "/")
 
-    return urlunsplit((scheme, netloc, parts.path or "/", query, ""))
+    return urlunsplit((scheme, netloc, path, query, ""))
+
+
+def dedup_key(url: str) -> str:
+    """Aggressively canonical fingerprint. Never fetched - comparison only."""
+    parts = urlsplit(url)
+    query = urlencode(
+        sorted(
+            (k, v)
+            for k, v in parse_qsl(parts.query, keep_blank_values=True)
+            if k.lower() not in TRACKING_PARAMS
+        )
+    )
+    path = _normalize_percent(parts.path or "/").rstrip("/") or "/"
+
+    return urlunsplit((parts.scheme, parts.netloc, path, query, ""))
 
 
 class Verdict(StrEnum):
@@ -230,7 +274,8 @@ class TimeStampedModel(BaseModel):
 class Source(TimeStampedModel):
     """A URL as a fetchable resource. One row per URL, reused across claims."""
 
-    url = TextField(verbose_name="URL", unique=True)
+    url = TextField(verbose_name="URL")
+    dedup_key = TextField(unique=True, index=True)
     domain = CharField(verbose_name="Domain", index=True, null=True)
     resolved_url = TextField(verbose_name="Resolved URL", null=True)
     fetch_outcome = CharField(
@@ -243,6 +288,7 @@ class Source(TimeStampedModel):
 
     def clean(self) -> None:
         self.url = normalize_url(self.url)
+        self.dedup_key = dedup_key(self.url)
         self.domain = urlsplit(self.url).hostname
 
         if self.fetch_outcome not in FetchOutcome:
@@ -258,7 +304,9 @@ class Source(TimeStampedModel):
     def for_url(cls, url: str) -> "Source":
         """Get the row for this URL, creating a PENDING one if it is new."""
         canonical = normalize_url(url)
-        source, _ = cls.get_or_create(url=canonical)
+        source, _ = cls.get_or_create(
+            dedup_key=dedup_key(canonical), defaults={"url": canonical}
+        )
 
         return source
 
