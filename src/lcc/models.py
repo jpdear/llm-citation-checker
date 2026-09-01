@@ -95,8 +95,12 @@ def to_local(value: datetime | None) -> datetime | None:
 
 def normalize_url(raw: str) -> str:
     """Canonical form of a URL, for dedup and fetching. Lossy: drops the fragment."""
-    parts = urlsplit((raw or "").strip())
-    scheme, host = parts.scheme.lower(), (parts.hostname or "").lower()
+    try:
+        parts = urlsplit((raw or "").strip())
+        scheme, host = parts.scheme.lower(), (parts.hostname or "").lower()
+        port = parts.port
+    except ValueError as exc:
+        raise ValidationError(f"Not a usable URL: {raw!r} ({exc})") from exc
 
     if not scheme or not host:
         raise ValidationError(f"Not a usable URL: {raw!r}")
