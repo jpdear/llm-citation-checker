@@ -69,7 +69,7 @@ def init_db(
     path: str | Path | None = None, *, create_tables: bool = True
 ) -> SqliteDatabase:
     """Attach a real database to the proxy. Call once, before any query."""
-    if path == MEMORY:
+    if path is not None and str(path) == MEMORY:
         database = SqliteDatabase(MEMORY, pragmas=PRAGMAS)
     else:
         resolved = Path(path).expanduser().resolve() if path else default_db_path()
