@@ -189,6 +189,9 @@ class FetchOutcome(StrEnum):
     HTTP_BLOCKED = "http_blocked"  # 403/405/429/503. Bot-blocked, NOT a verdict.
     HTTP_ERROR = "http_error"  # Other non-2xx.
     SOFT_NOT_FOUND = "soft_404"  # 200 but the body is an error page.
+    WRONG_CONTENT_TYPE = "wrong_content_type"  # 200, but not a readable document.
+    TOO_LARGE = "too_large"  # Body exceeded the size cap.
+    TOO_MANY_REDIRECTS = "too_many_redirects"  # Redirect loop or chain too long.
 
 
 class BaseModel(Model):
