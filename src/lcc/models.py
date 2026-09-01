@@ -44,7 +44,7 @@ TRACKING_PARAMS = frozenset(
         "ref_src",
     }
 )
-BLOCKED_PORTS = frozenset({22, 23, 25, 445, 3306, 5432, 6379, 9200, 11211})
+ALLOWED_PORTS = frozenset({80, 443, 8080, 8443})
 # is_private covers RFC1918, loopback, link-local, reserved, and unspecified.
 # It does not cover these two.
 EXTRA_BLOCKED_NETWORKS = (
@@ -136,7 +136,7 @@ def normalize_url(raw: str) -> str:
     if scheme not in ("http", "https"):
         raise ValidationError(f"Unsupported scheme {scheme!r} in {raw!r}")
 
-    if port in BLOCKED_PORTS:
+    if port is not None and port not in ALLOWED_PORTS:
         raise ValidationError(f"Refusing non-web port {port} in {raw!r}")
 
     # Drop redundant default ports so they dedup against the bare host.
