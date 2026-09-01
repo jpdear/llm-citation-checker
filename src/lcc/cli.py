@@ -3,6 +3,7 @@ from pathlib import Path
 
 import click
 
+from lcc.fetch import guard
 from lcc.models import ValidationError, init_db, normalize_url
 
 
@@ -13,9 +14,12 @@ def _clean_urls(raw_urls: Iterable[str]) -> tuple[list[str], list[tuple[str, str
 
     for raw in raw_urls:
         try:
-            seen.setdefault(normalize_url(raw), None)
+            canonical = normalize_url(raw)
+            guard(canonical)
         except ValidationError as exc:
             rejected.append((raw, str(exc)))
+        else:
+            seen.setdefault(canonical, None)
 
     return list(seen), rejected
 
